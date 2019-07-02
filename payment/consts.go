@@ -16,6 +16,5 @@
 package payment
 
 const (
-	createWallet  = "create_wallet"
-	adminIdentity = "Admin@pharmeum.io"
+	createWallet = "create_wallet"
 )

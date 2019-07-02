@@ -23,7 +23,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
-	"github.com/hyperledger/fabric/core/chaincode/shim/ext/cid"
 	"github.com/hyperledger/fabric/protos/peer"
 )
 
@@ -55,7 +54,7 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 
 	switch function {
 	case createWallet:
-		c.createWallet(stub)
+		response = c.createWallet(stub)
 	default:
 		c.logger.Debugf("no such function %s, invocation rejected", function)
 		response = peer.Response{
@@ -70,55 +69,28 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 }
 
 func (c *Chaincode) createWallet(stub shim.ChaincodeStubInterface) peer.Response {
-	x509, _ := cid.GetX509Certificate(stub)
-	if x509.Subject.CommonName != adminIdentity {
-		c.logger.Debug("failed to create wallet, only admin can create new wallet. Current identity = ", x509.Subject.CommonName)
-		return peer.Response{
-			Status:  shim.ERRORTHRESHOLD,
-			Message: "only admin can create new wallet",
-		}
-	}
-
-	// args[0] - public key
-	args, err := stub.GetArgsSlice()
-	if err != nil {
-		c.logger.Debug("failed to read arguments from stub", err)
-		return peer.Response{
-			Status:  shim.ERRORTHRESHOLD,
-			Message: err.Error(),
-		}
-	}
-
-	if len(args) != 1 {
-		c.logger.Debug("invalid amount of arguments")
+	args := stub.GetStringArgs()
+	if len(args) != 2 {
+		c.logger.Errorf("creat wallet action: invalid amount of arguments. want 2, got %d", len(args))
 		return peer.Response{
 			Status:  shim.ERRORTHRESHOLD,
 			Message: errInvalidArguments.Error(),
 		}
 	}
 
-	ok, err := ValidPublicKey(args)
-	if err != nil {
-		c.logger.Debug("public key validation failed", err)
-		return peer.Response{
-			Status:  shim.ERRORTHRESHOLD,
-			Message: errors.Wrap(err, "public key validation failed").Error(),
-		}
-	}
-
-	if !ok {
-		c.logger.Debug(errInvalidPublicKey.Error())
-		return peer.Response{
-			Status:  shim.ERRORTHRESHOLD,
-			Message: errInvalidPublicKey.Error(),
-		}
-	}
-
 	bytes, err := json.Marshal(&wallet{
 		Balance: defaultAmountOfPHRMTokens,
 	})
+	if err != nil {
+		c.logger.Error("failed to serialize state to json format", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: "failed to serialize state to json format",
+		}
+	}
 
 	if err := stub.PutState(string(args[1]), bytes); err != nil {
+		c.logger.Error("failed to create new wallet", err)
 		return peer.Response{
 			Status:  shim.ERROR,
 			Message: errors.Wrap(err, "failed to create wallet").Error(),
