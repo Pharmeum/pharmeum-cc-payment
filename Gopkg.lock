@@ -38,6 +38,12 @@
   revision = "aaeac12a7ffcd198ae25440a9dff125c2e2703a7"
 
 [[projects]]
+  name = "github.com/davecgh/go-spew"
+  packages = ["spew"]
+  revision = "8991bc29aa16c548c550c7ff78260e27b9ab7c73"
+  version = "v1.1.1"
+
+[[projects]]
   name = "github.com/docker/distribution"
   packages = ["registry/api/errcode"]
   revision = "2461543d988979529609e8cb6fca9ca190dc48da"
@@ -93,7 +99,7 @@
 
 [[projects]]
   name = "github.com/hyperledger/fabric"
-  packages = ["bccsp","bccsp/factory","bccsp/idemix","bccsp/idemix/bridge","bccsp/idemix/handlers","bccsp/pkcs11","bccsp/signer","bccsp/sw","bccsp/utils","common/crypto","common/flogging","common/flogging/fabenc","common/ledger","common/metadata","common/metrics","common/semaphore","common/util","core/chaincode/platforms","core/chaincode/platforms/ccmetadata","core/chaincode/shim","core/chaincode/shim/ext/attrmgr","core/chaincode/shim/ext/cid","core/comm","core/config","core/container/util","idemix","msp","protos/common","protos/ledger/queryresult","protos/ledger/rwset","protos/ledger/rwset/kvrwset","protos/msp","protos/peer","protos/token","protos/utils"]
+  packages = ["bccsp","bccsp/factory","bccsp/idemix","bccsp/idemix/bridge","bccsp/idemix/handlers","bccsp/pkcs11","bccsp/signer","bccsp/sw","bccsp/utils","common/crypto","common/flogging","common/flogging/fabenc","common/ledger","common/metadata","common/metrics","common/semaphore","common/util","core/chaincode/platforms","core/chaincode/platforms/ccmetadata","core/chaincode/shim","core/comm","core/config","core/container/util","idemix","msp","protos/common","protos/ledger/queryresult","protos/ledger/rwset","protos/ledger/rwset/kvrwset","protos/msp","protos/peer","protos/token","protos/utils"]
   revision = "87074a73f3f6fcdff7e82707c9b476596d030d04"
   version = "v1.4.1"
 
@@ -170,6 +176,18 @@
   version = "v0.8.1"
 
 [[projects]]
+  name = "github.com/pmezard/go-difflib"
+  packages = ["difflib"]
+  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/shopspring/decimal"
+  packages = ["."]
+  revision = "cd690d0c9e2447b1ef2a129a6b7b49077da89b8e"
+  version = "1.1.0"
+
+[[projects]]
   name = "github.com/sirupsen/logrus"
   packages = ["."]
   revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
@@ -197,6 +215,12 @@
   name = "github.com/spf13/viper"
   packages = ["."]
   revision = "1967d93db724f4a5c0e101307e96d82ff520a067"
+
+[[projects]]
+  name = "github.com/stretchr/testify"
+  packages = ["assert"]
+  revision = "ffdc059bfe9ce6a4e144ba849dbedead332c6053"
+  version = "v1.3.0"
 
 [[projects]]
   name = "github.com/sykesm/zap-logfmt"
@@ -267,6 +291,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b65ce318f4cdd0af55f9c631067b5b1f9873a49e58872dd1db30b43ec08fede3"
+  inputs-digest = "6c0199e1ae97c09a2e4b4b78fa3e493118ab055af99c5b9da00a6e12a48766f6"
   solver-name = "gps-cdcl"
   solver-version = 1
