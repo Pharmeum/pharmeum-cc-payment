@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 
 	"github.com/hyperledger/fabric/core/chaincode/shim"
 	"github.com/hyperledger/fabric/protos/peer"
@@ -55,6 +56,8 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	switch function {
 	case createWallet:
 		response = c.createWallet(stub)
+	case transferPayment:
+		response = c.transferPayment(stub)
 	default:
 		c.logger.Debugf("no such function %s, invocation rejected", function)
 		response = peer.Response{
@@ -69,6 +72,7 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 }
 
 func (c *Chaincode) createWallet(stub shim.ChaincodeStubInterface) peer.Response {
+	//1 - function call, 2 - wallet address
 	args := stub.GetStringArgs()
 	if len(args) != 2 {
 		c.logger.Errorf("creat wallet action: invalid amount of arguments. want 2, got %d", len(args))
@@ -94,6 +98,146 @@ func (c *Chaincode) createWallet(stub shim.ChaincodeStubInterface) peer.Response
 		return peer.Response{
 			Status:  shim.ERROR,
 			Message: errors.Wrap(err, "failed to create wallet").Error(),
+		}
+	}
+
+	return peer.Response{
+		Status: shim.OK,
+	}
+}
+
+func (c *Chaincode) transferPayment(stub shim.ChaincodeStubInterface) peer.Response {
+	//1 - function name, 2 - sender wallet, 3 - receiver wallet, 4 - amount
+	args := stub.GetStringArgs()
+	if len(args) != 4 {
+		c.logger.Errorf("transfer payment action: invalid amount of arguments. want 4, got %d", len(args))
+		return peer.Response{
+			Status:  shim.ERRORTHRESHOLD,
+			Message: errInvalidArguments.Error(),
+		}
+	}
+
+	var (
+		senderAddress   = args[1]
+		receiverAddress = args[2]
+	)
+
+	senderWalletState, err := stub.GetState(senderAddress)
+	if err != nil {
+		c.logger.Errorf("transfer payment: failed to get sender wallet state %s, error: %s", args[1], err.Error())
+		return peer.Response{
+			Status:  shim.ERRORTHRESHOLD,
+			Message: fmt.Sprintf("transfer payment: failed to get sender wallet state %s, error: %s", args[1], err.Error()),
+		}
+	}
+
+	receiverWalletState, err := stub.GetState(receiverAddress)
+	if err != nil {
+		c.logger.Errorf("transfer payment: failed to get receiver wallet state %s, error: %s", args[1], err.Error())
+		return peer.Response{
+			Status:  shim.ERRORTHRESHOLD,
+			Message: fmt.Sprintf("transfer payment: failed to get receiver wallet state %s, error: %s", args[1], err.Error()),
+		}
+	}
+
+	amount, err := decimal.NewFromString(args[3])
+	if err != nil {
+		c.logger.Error("transfer payment: can't convert requested amount to decimal format: %s", err)
+		return peer.Response{
+			Status:  shim.ERRORTHRESHOLD,
+			Message: fmt.Sprintf("transfer payment: can't convert requested amount to decimal format: %s", err),
+		}
+	}
+
+	senderWallet := &wallet{}
+	if err := json.Unmarshal(senderWalletState, senderWallet); err != nil {
+		c.logger.Error("transfer payment: failed to deserialize sender wallet state ", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: failed to deserialize sender wallet state, error: %s", err),
+		}
+	}
+
+	receiverWallet := &wallet{}
+	if err := json.Unmarshal(receiverWalletState, receiverWallet); err != nil {
+		c.logger.Error("transfer payment: failed to deserialize receiver wallet state ", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: failed to deserialize receiver wallet state, error: %s", err),
+		}
+	}
+
+	senderBalance, err := decimal.NewFromString(senderWallet.Balance)
+	if err != nil {
+		c.logger.Error("transfer payment: can't convert sender balance to decimal format: %s", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: can't convert sender balance to decimal format: %s", err),
+		}
+	}
+
+	receiverBalance, err := decimal.NewFromString(receiverWallet.Balance)
+	if err != nil {
+		c.logger.Error("transfer payment: can't convert receiver balance to decimal format: %s", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: can't convert receiver balance to decimal format: %s", err),
+		}
+	}
+
+	if senderBalance.Equal(decimal.Zero) {
+		c.logger.Debug("transfer payment: cant send money from empty wallet balance %s, error: %s", args[1], errBalanceShouldNotBeZero)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: cant send money from empty wallet balance %s, error: %s", args[1], errBalanceShouldNotBeZero),
+		}
+	}
+
+	if senderBalance.Sub(amount).IsNegative() {
+		c.logger.Debug("transfer payment: cant send money from wallet %s, error: %s", args[1], errNotEnoughtTokens)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: cant send money from wallet %s, error: %s", args[1], errNotEnoughtTokens),
+		}
+	}
+
+	senderBalance = senderBalance.Sub(amount)
+	receiverBalance = receiverBalance.Add(amount)
+
+	senderWallet.Balance = senderBalance.String()
+	receiverWallet.Balance = receiverBalance.String()
+
+	senderWalletState, err = json.Marshal(senderWallet)
+	if err != nil {
+		c.logger.Debug("transfer payment: failed to serialize sender wallet", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: failed to serialize sender wallet %s", err),
+		}
+	}
+
+	if err := stub.PutState(senderAddress, senderWalletState); err != nil {
+		c.logger.Debug("transfer payment: failed to put sender wallet state", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: failed to put sender wallet state %s", err),
+		}
+	}
+
+	receiverWalletState, err = json.Marshal(receiverWallet)
+	if err != nil {
+		c.logger.Debug("transfer payment: failed to serialize receiver wallet", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: failed to serialize receiver wallet %s", err),
+		}
+	}
+
+	if err := stub.PutState(receiverAddress, receiverWalletState); err != nil {
+		c.logger.Debug("transfer payment: failed to put receiver wallet state", err)
+		return peer.Response{
+			Status:  shim.ERROR,
+			Message: fmt.Sprintf("transfer payment: failed to put receiver wallet state %s", err),
 		}
 	}
 

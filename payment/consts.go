@@ -16,5 +16,6 @@
 package payment
 
 const (
-	createWallet = "create_wallet"
+	createWallet    = "create_wallet"
+	transferPayment = "transfer_payment"
 )

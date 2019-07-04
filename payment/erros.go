@@ -18,6 +18,7 @@ package payment
 import "github.com/pkg/errors"
 
 var (
-	errInvalidArguments = errors.New("invalid payment chaincode arguments")
-	errInvalidPublicKey = errors.New("invalid public key")
+	errInvalidArguments       = errors.New("invalid payment chaincode arguments")
+	errBalanceShouldNotBeZero = errors.New("balance should not be zero")
+	errNotEnoughtTokens       = errors.New("not enough tokens")
 )
