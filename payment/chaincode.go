@@ -37,6 +37,13 @@ type Chaincode struct {
 //Init do initialization of chaincode structure
 func (c *Chaincode) Init(stub shim.ChaincodeStubInterface) peer.Response {
 	c.logger = shim.NewLogger("payment-chaincode")
+	defer c.logger.Info("successfully initialized chaincode")
+
+	if err  := stub.PutState("init", []byte(`{"init": true}`)); err != nil{
+		c.logger.Error("payment init: failed to put initial transaction")
+		return peer.Response{Status:shim.ERROR}
+	}
+
 	return shim.Success([]byte("successfully initialized chaincode"))
 }
 
@@ -59,7 +66,7 @@ func (c *Chaincode) Invoke(stub shim.ChaincodeStubInterface) peer.Response {
 	case transferPayment:
 		response = c.transferPayment(stub)
 	default:
-		c.logger.Debugf("no such function %s, invocation rejected", function)
+		c.logger.Errorf("no such function %s, invocation rejected", function)
 		response = peer.Response{
 			Status:  shim.ERRORTHRESHOLD,
 			Message: fmt.Sprintf("no such function %s, invocation rejected", function),
@@ -209,7 +216,7 @@ func (c *Chaincode) transferPayment(stub shim.ChaincodeStubInterface) peer.Respo
 
 	senderWalletState, err = json.Marshal(senderWallet)
 	if err != nil {
-		c.logger.Debug("transfer payment: failed to serialize sender wallet", err)
+		c.logger.Error("transfer payment: failed to serialize sender wallet", err)
 		return peer.Response{
 			Status:  shim.ERROR,
 			Message: fmt.Sprintf("transfer payment: failed to serialize sender wallet %s", err),
@@ -217,7 +224,7 @@ func (c *Chaincode) transferPayment(stub shim.ChaincodeStubInterface) peer.Respo
 	}
 
 	if err := stub.PutState(senderAddress, senderWalletState); err != nil {
-		c.logger.Debug("transfer payment: failed to put sender wallet state", err)
+		c.logger.Error("transfer payment: failed to put sender wallet state", err)
 		return peer.Response{
 			Status:  shim.ERROR,
 			Message: fmt.Sprintf("transfer payment: failed to put sender wallet state %s", err),
@@ -226,7 +233,7 @@ func (c *Chaincode) transferPayment(stub shim.ChaincodeStubInterface) peer.Respo
 
 	receiverWalletState, err = json.Marshal(receiverWallet)
 	if err != nil {
-		c.logger.Debug("transfer payment: failed to serialize receiver wallet", err)
+		c.logger.Error("transfer payment: failed to serialize receiver wallet", err)
 		return peer.Response{
 			Status:  shim.ERROR,
 			Message: fmt.Sprintf("transfer payment: failed to serialize receiver wallet %s", err),
@@ -234,7 +241,7 @@ func (c *Chaincode) transferPayment(stub shim.ChaincodeStubInterface) peer.Respo
 	}
 
 	if err := stub.PutState(receiverAddress, receiverWalletState); err != nil {
-		c.logger.Debug("transfer payment: failed to put receiver wallet state", err)
+		c.logger.Error("transfer payment: failed to put receiver wallet state", err)
 		return peer.Response{
 			Status:  shim.ERROR,
 			Message: fmt.Sprintf("transfer payment: failed to put receiver wallet state %s", err),
